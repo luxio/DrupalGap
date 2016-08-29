@@ -1,4 +1,4 @@
-/*! drupalgap 2016-07-17 */
+/*! drupalgap 2016-08-28 */
 // Initialize the drupalgap json object.
 var drupalgap = drupalgap || drupalgap_init(); // Do not remove this line.
 
@@ -995,19 +995,20 @@ function drupalgap_jqm_page_events() {
  */
 function drupalgap_jqm_page_event_script_code(options) {
   try {
+    if (!options.page_id) { options.page_id = drupalgap_get_page_id(); }
+    if (!options.jqm_page_event) { options.jqm_page_event = 'pageshow'; }
     // Build the arguments to send to the event fire handler.
     var event_fire_args = '"' + options.jqm_page_event + '", "' +
       options.jqm_page_event_callback + '", ' +
       options.jqm_page_event_args;
     if (arguments[1]) { event_fire_args += ', "' + arguments[1] + '"'; }
     // Build the inline JS and return it.
-    var script_code = '<script type="text/javascript">' +
+    return '<script type="text/javascript">' +
       '$("#' + options.page_id + '").on("' +
         options.jqm_page_event + '", drupalgap_jqm_page_event_fire(' +
-          event_fire_args +
-        '));' +
+        event_fire_args +
+      '));' +
     '</script>';
-    return script_code;
   }
   catch (error) {
     console.log('drupalgap_jqm_page_event_script_code - ' + error);
@@ -1071,7 +1072,7 @@ function drupalgap_menu_access(path) {
 
         // An access callback function is specified for this path...
         var function_name = drupalgap.menu_links[path].access_callback;
-        if (drupalgap_function_exists(function_name)) {
+        if (function_exists(function_name)) {
           // Grab the access callback function. If there are any access args
           // send them along, or just call the function directly.
           // access arguments.
@@ -2052,7 +2053,7 @@ function drupalgap_block_load(delta) {
 function drupalgap_block_render(region, current_path, block_delta,
   block_settings, block_counts) {
   try {
-    var html = '';
+    var content = '';
     // Check the block's visibility settings. If an access_callback
     // function is specified on the block's settings, we'll call that
     // to determine the visibility, otherwise we'll fall back to the
@@ -2086,7 +2087,7 @@ function drupalgap_block_render(region, current_path, block_delta,
         block_counts.block_menu_count++;
       }
       if (block) {
-        html = module_invoke(
+        content = module_invoke(
           block.module,
           'block_view',
           block_delta,
@@ -2094,7 +2095,7 @@ function drupalgap_block_render(region, current_path, block_delta,
         );
       }
     }
-    return html;
+    return typeof content === 'string' ? content : drupalgap_render(content);
   }
   catch (error) { console.log('drupalgap_block_render - ' + error); }
 }
@@ -2807,9 +2808,10 @@ function _drupalgap_form_render_element(form, element) {
         // if it wasn't already set, otherwise set it to the item's value.
         if (!item.default_value) { item.default_value = ''; }
         variables.attributes.value = item.default_value;
-        if (typeof item.value !== 'undefined' && typeof variables.attributes.value === 'undefined') {
-          variables.attributes.value = item.value;
-        }
+        if (
+            typeof item.value !== 'undefined' &&
+            (typeof variables.attributes.value === 'undefined' || empty(variables.attributes.value))
+        ) { variables.attributes.value = item.value; }
 
         // Call the hook_field_widget_form() if necessary. Merge any changes
         // to the item back into this item.
@@ -2859,6 +2861,23 @@ function _drupalgap_form_render_element(form, element) {
     // Are we skipping the render of the item?
     if (!render_item) { return ''; }
 
+    // Show the 'Add another item' button on unlimited value fields.
+    /*if (element.field_info_field &&
+      element.field_info_field.cardinality == -1) {
+      var add_another_item_variables = {
+        text: 'Add another item',
+        attributes: {
+          'class': 'drupalgap_form_add_another_item',
+          onclick:
+            "javascript:_drupalgap_form_add_another_item('" +
+              form.id + "', '" +
+              element.name + "', " +
+              delta +
+            ')'
+        }
+      };
+      html += theme('button', add_another_item_variables);
+    }*/
 
     // Is this element wrapped? We won't wrap hidden inputs by default, unless
     // someone is overriding it.
@@ -2906,27 +2925,6 @@ function _drupalgap_form_render_element(form, element) {
     if (element.description && element.type != 'hidden') {
       html += '<div class="description">' + t(element.description) + '</div>';
     }
-
-    // Show the 'Add another item' button on unlimited value fields.
-    if (element.field_info_field &&
-        element.field_info_field.cardinality == -1) {
-      var add_another_item_variables = {
-        text: 'Add another item',
-        attributes: {
-          'class': 'drupalgap_form_add_another_item',
-          'style': (element.field_info_field.type == 'file') ? 'display: none;' : '',
-          onclick:
-          "javascript:_drupalgap_form_add_another_item('" +
-          form.id + "', '" +
-          element.name + "', " +
-          delta +
-          ')'
-        }
-      };
-      html += theme('button', add_another_item_variables);
-      console.log('class + : ' + drupalgap_form_get_element_container_class(name));
-    }
-
 
     // Close the element container.
     if (wrapped) { html += '</div>'; }
@@ -3129,8 +3127,8 @@ function _drupalgap_form_add_another_item(form_id, name, delta) {
     // Locate the last item, load the form, extract the element from
     // the form, generate default variables for the new item, determine the next
     // delta value.
-    var selector = '.' + drupalgap_form_get_element_container_class(name).replace(/\s+/g, '.') + ' .drupalgap_form_add_another_item';
-    console.log('selector: ' + selector);
+    var selector = '.' + drupalgap_form_get_element_container_class(name) +
+      ' .drupalgap_form_add_another_item';
     var add_another_item_button = $(selector);
     var form = drupalgap_form_local_storage_load(form_id);
     var language = language_default();
@@ -3143,10 +3141,7 @@ function _drupalgap_form_add_another_item(form_id, name, delta) {
     form.elements[name][language][delta + 1] = item;
     var element = form.elements[name];
     var variables = {
-      attributes: {
-        id: item.id,
-        value: ''
-      },
+      attributes: {},
       field_info_field: element.field_info_field,
       field_info_instance: element.field_info_instance
     };
@@ -3164,19 +3159,8 @@ function _drupalgap_form_add_another_item(form_id, name, delta) {
     );
     drupalgap_form_local_storage_save(form);
     $(add_another_item_button).before(
-        _drupalgap_form_render_element_item(form, element, variables, item)
+      _drupalgap_form_render_element_item(form, element, variables, item)
     );
-    // increment delta of the add another button item
-    $(add_another_item_button).attr("onclick",
-      "javascript:_drupalgap_form_add_another_item('" +
-        form.id + "', '" +
-        element.name + "', " +
-        (delta + 1) +
-        ")"
-    );
-    // enhance the markup of dynamically added element
-    $('#' + drupalgap_get_page_id()).trigger('create');
-
   }
   catch (error) { console.log('_drupalgap_form_add_another_item - ' + error); }
 }
@@ -3763,8 +3747,7 @@ function drupalgap_form_state_values_assemble(form) {
         form_state.values[name][lng] = {};
         var allowed_values = element.field_info_field.cardinality;
         if (allowed_values == -1) {
-          // how many values are in the form
-          allowed_values = Object.keys(element[lng]).length;
+          allowed_values = 1; // Convert unlimited value field to one for now...
         }
         for (var delta = 0; delta < allowed_values; delta++) {
           id = drupalgap_form_get_element_id(name, form.id, lng, delta);
@@ -4587,6 +4570,27 @@ function drupalgap_back() {
     else { _drupalgap_back(); }
   }
   catch (error) { console.log('drupalgap_back - ' + error); }
+}
+
+/**
+ * The DrupalGap "Back to the Future" function goes forward to the previous page by first
+ * removing that page from the DOM, then going "forward" to that page using drupalgap_goto()
+ * with a reloadPage option set to true.
+ */
+function drupalgap_back_2tf() {
+  var back = drupalgap_back_path();
+  drupalgap_remove_page_from_dom(drupalgap_get_page_id(back));
+  drupalgap_goto(back, { reloadPage: true });
+}
+
+/**
+ * Returns the previous page path, or the front page if there is none.
+ * @returns {String}
+ */
+function drupalgap_back_path() {
+  return drupalgap.back_path.length ?
+      drupalgap.back_path[drupalgap.back_path.length - 1] :
+      drupalgap.settings.front;
 }
 
 /**
@@ -5715,7 +5719,11 @@ function drupalgap_remove_page_from_dom(page_id) {
     var options = {};
     if (typeof arguments[1] !== 'undefined') { options = arguments[1]; }
     if (current_page_id != page_id || options.force) {
+      var currentPage = $('#' + current_page_id);
+      // Preserve and re-apply style to current page, @see https://github.com/signalpoint/DrupalGap/issues/837
+      var style = $(currentPage).attr('style');
       $('#' + page_id).empty().remove();
+      if (style) { $(currentPage).attr('style', style); }
       var page_index = drupalgap.pages.indexOf(page_id);
       if (page_index > -1) { drupalgap.pages.splice(page_index, 1); }
       // We'll remove the query string, unless we were instructed to leave it.
@@ -6514,9 +6522,9 @@ function theme_item_list(variables) {
     if (variables.items && variables.items.length > 0) {
       var listview = typeof variables.attributes['data-role'] !== 'undefined' &&
         variables.attributes['data-role'] == 'listview';
-      for (var index in variables.items) {
-          if (!variables.items.hasOwnProperty(index)) { continue; }
-          var item = variables.items[index];
+      for (var index = 0; index < variables.items.length; index++) {
+        var item = variables.items[index];
+        if (typeof item === 'string') {
           var icon = null;
           html += '<li';
           if (listview && (icon = $(item).attr('data-icon'))) {
@@ -6525,6 +6533,12 @@ function theme_item_list(variables) {
             html += ' data-icon="' + icon + '"';
           }
           html += '>' + item + '</li>';
+        }
+        else if (typeof item === 'object') {
+          var attributes = item.attributes ? item.attributes : {};
+          var content = item.content ? item.content : '';
+          html += '<li ' + drupalgap_attributes(attributes) + '>' + drupalgap_render(content) + '</li>';
+        }
       }
     }
     html += '</' + type + '>';
@@ -7650,7 +7664,7 @@ function comment_services_postprocess(options, result) {
                     $(container).append(
                       theme('comment', { comment: comment })
                     ).trigger('create');
-                    scrollToElement('#' + container_id + ' :last-child', 500);
+                    scrollToElement('#' + container_id + ' #' + comment_container_id(comment.cid), 500);
                     var form_selector = '#' + drupalgap_get_page_id() +
                       ' #comment_edit' + '_' + comment.nid;
                     drupalgap_form_clear(form_selector);
@@ -8097,6 +8111,14 @@ function contact_personal_form_to_container_id(recipient) {
 }
 
 
+/**
+ * Given an entity type and optional bundle, this will return the view mode machine name to use.
+ * It defaults to "drupalgap", but can be configured.
+ * @param {String} entity_type
+ * @param {String} bundle
+ * @returns {string}
+ * @see http://docs.drupalgap.org/7/Entities/Display_Modes
+ */
 function drupalgap_entity_view_mode(entity_type, bundle) {
   var view_mode = 'drupalgap';
   if (typeof drupalgap.settings.view_modes !== 'undefined') {
@@ -8116,6 +8138,93 @@ function drupalgap_entity_view_mode(entity_type, bundle) {
   }
   return view_mode;
 }
+
+/**
+ * Given an entity type, id and optional context, this will return a container id to be used
+ * when constructing a placeholder to load/display/edit an entity.
+ * @param {String} entity_type
+ * @param {Number} entity_id
+ * @param {String} context An optional context to use, e.g. "edit"
+ * @returns {string}
+ */
+function drupalgap_get_entity_container_id(entity_type, entity_id, context) {
+  var id = 'dg-entity-container-' + entity_type + '-' + entity_id;
+  if (context) { id += '-' + context; }
+  return id;
+}
+
+/**
+ * A page_callback function used to build an empty placeholder for an entity and inline
+ * JavaScript to retrieve the entity for display.
+ * @param {String} handler
+ * @param {String} entity_type
+ * @param {Number} entity_id
+ * @returns {string}
+ */
+function drupalgap_get_entity(handler, entity_type, entity_id) {
+  return '<div ' + drupalgap_attributes({
+    id: drupalgap_get_entity_container_id(entity_type, entity_id),
+    'class': 'dg-entity-container ' + entity_type
+  }) + '></div>' + drupalgap_jqm_page_event_script_code({
+    jqm_page_event_callback: 'drupalgap_get_entity_pageshow',
+    jqm_page_event_args: JSON.stringify({
+      handler: handler,
+      entity_type: entity_type,
+      entity_id: entity_id
+    })
+  });
+}
+
+/**
+ * A pageshow function used to retrieve an entity, pass it along to its handler for rendering,
+ * and then inject the handler's render array into the waiting placeholder.
+ * @param {Object} options
+ */
+function drupalgap_get_entity_pageshow(options) {
+  entity_load(options.entity_type, options.entity_id, {
+    success: function(entity) {
+      var id = drupalgap_get_entity_container_id(options.entity_type, options.entity_id);
+      $('#' + id).html(drupalgap_render(window[options.handler](entity))).trigger('create');
+    }
+  });
+}
+
+/**
+ * A page_callback function used to build an empty placeholder for an entity and inline
+ * JavaScript to retrieve the entity for editing.
+ * @param {String} handler
+ * @param {String} entity_type
+ * @param {Number} entity_id
+ * @returns {string}
+ */
+function drupalgap_get_entity_form(handler, entity_type, entity_id) {
+  return '<div ' + drupalgap_attributes({
+        id: drupalgap_get_entity_container_id(entity_type, entity_id, 'edit'),
+        'class': 'dg-entity-container ' + entity_type
+      }) + '></div>' + drupalgap_jqm_page_event_script_code({
+        jqm_page_event_callback: 'drupalgap_get_entity_form_pageshow',
+        jqm_page_event_args: JSON.stringify({
+          handler: handler,
+          entity_type: entity_type,
+          entity_id: entity_id
+        })
+      });
+}
+
+/**
+ * A pageshow function used to retrieve an entity, pass it along to a form builder, and then
+ * inject the form into the waiting placeholder.
+ * @param {Object} options
+ */
+function drupalgap_get_entity_form_pageshow(options) {
+  entity_load(options.entity_type, options.entity_id, {
+    success: function(entity) {
+      var id = drupalgap_get_entity_container_id(options.entity_type, options.entity_id, 'edit');
+      $('#' + id).html(drupalgap_get_form(options.handler, entity)).trigger('create');
+    }
+  });
+}
+
 /**
  * Implements hook_install().
  */
@@ -8517,15 +8626,7 @@ function drupalgap_entity_build_from_form_state(form, form_state) {
           var allowed_values = form.elements[name].field_info_field.cardinality;
 
           // Convert unlimited value fields to one, for now...
-          // if (allowed_values == -1) { allowed_values = 1; }
-          if (allowed_values == -1) {
-            console.log('drupalgap_entity_build_from_form_state - value: ');
-            console.log(value);
-            allowed_values = Object.keys(value[language]).length;
-            console.log('allowed_values : '+ allowed_values);
-          }
-
-
+          if (allowed_values == -1) { allowed_values = 1; }
 
           // Make sure there is at least one value before creating the form
           // element on the entity.
@@ -10000,280 +10101,6 @@ function file_entity_field_formatter_view(entity_type, entity, field, instance, 
   }
   catch (error) { console.log('file_entity_field_formatter_view - ' + error); }
 }
-
-/**
- * Implements hook_field_widget_form().
- */
-function file_field_widget_form(form, form_state, field, instance, langcode, items, delta, element) {
-  try {
-    // Change the item type to a hidden input to hold the file id.
-    // items[delta].type = 'textfield';
-    items[delta].type = 'hidden';
-
-    // If we already have an file for this item, show it.
-    // @TODO: show exisiting fid
-
-    var browse_button_text = t('Add Media');
-    var item_id_base = items[delta].id.replace(/-/g, '_');
-
-    var browse_button_id = items[delta].id + '-add-media-button';
-
-    var html = '<div id="' + items[delta].id + '-media"></div><a href="#" data-role="button" data-icon="camera" ' +
-      'id="' + browse_button_id + '" ' +
-      'data-form_id="' + form.id + '" ' +
-      'data-name="' + element.name + '" ' +
-      'data-delta="' + delta + '" ' +
-      'data-cardinality="' + field.cardinality + '" ' +
-      '>' +
-      browse_button_text +
-      '</a>';
-
-
-
-
-    // Open extra javascript declaration.
-    //
-// $("#" + drupalgap_get_page_id(drupalgap_path_get())).on("pageshow", function () {
-//   document.addEventListener("deviceready", init, false);
-// });
-
-
-    html += '<script type="text/javascript">';
-    // Add device ready listener for PhoneGap camera.
-    html += '$("#' + drupalgap_get_page_id(
-        drupalgap_path_get()) + '").on("pageshow",function(){' +
-      'document.addEventListener(' +
-      '"deviceready", init_media_upload, false );' +
-      '});' ;
-    html += '</script>';
-
-    // Add html to the item's children.
-    if (items[delta].children) {
-      items[delta].children.push({markup: html});
-    } else {
-      items[delta].children = [{markup: html}];
-    }
-
-    //drupalgap_add_js(drupalgap_get_path('module', 'file') + '/file_upload.js');
-  }
-
-  catch (error) {
-    console.log('file_entity_field_formatter_view - ' + error);
-  }
-}
-
-
-/**
- * Implements hook_assemble_form_state_into_field().
- * @param {Object} entity_type
- * @param {String} bundle
- * @param {String} form_state_value
- * @param {Object} field
- * @param {Object} instance
- * @param {String} langcode
- * @param {Number} delta
- * @param {Object} field_key
- * @return {*}
- */
-function file_assemble_form_state_into_field(entity_type, bundle,
-                                             form_state_value,
-                                             field,
-                                             instance,
-                                             langcode,
-                                             delta,
-                                             field_key) {
-  try {
-    field_key.value = 'fid';
-    return form_state_value;
-  }
-  catch (error) {
-    console.log('file_assemble_form_state_into_field - ' + error);
-  }
-}
-
-//
-// $("#" + drupalgap_get_page_id(drupalgap_path_get())).on("pageshow", function () {
-//   document.addEventListener("deviceready", init, false);
-// });
-
-function init_media_upload() {
-  console.log("init_media_upload");
-  $("[id$=-add-media-button]").on("click", function (event) {
-    // get id of input field
-    var regExp = /(.+)-add-media-button/;
-    var input_id = regExp.exec(event.target.id)[1];
-
-    var form_id = $(this).data("form_id");
-    var name = $(this).data("name");
-    var cardinality = $(this).data("cardinality");
-    var delta = $(this).data("delta");
-
-    function setCameraOptions(srcType, medType) {
-      var options = {
-        quality: (drupalgap.settings.camera.quality) ? drupalgap.settings.camera.quality : 50,
-        sourceType: srcType, // Camera.PictureSourceType.PHOTOLIBRARY, Camera.PictureSourceType.CAMERA,
-        destinationType: Camera.DestinationType.FILE_URI,
-        mediaType: medType, // Camera.MediaType.VIDEO, Camera.MediaType.PICTURE, Camera.MediaType.ALLMEDIA
-        targetWidth: (drupalgap.settings.camera.targetWidth) ? drupalgap.settings.camera.targetWidth : 1024,
-        targetHeight: (drupalgap.settings.camera.targetHeight) ? drupalgap.settings.camera.targetHeight : 1024
-      };
-
-      return options;
-    }
-
-    function captureError(e) {
-      console.log("capture error: " + JSON.stringify(e));
-    }
-
-    function captureVideoSuccess(s) {
-      console.log("Success");
-      dpm(s);
-      console.dir(s[0]);
-      console.log("dpm:");
-      dpm(s[0]);
-      var mediaHTML = "<video  style='max-width:100%;' controls><source src='" + s[0].fullPath + "'></video>";
-      $("#" + input_id + "-media").html(mediaHTML);
-      uploadFile(s[0].fullPath);
-    }
-
-    function captureAudioSuccess(s) {
-      console.log("Success");
-      dpm(s);
-      console.dir(s[0]);
-      console.log("dpm:");
-      dpm(s[0]);
-      var mediaHTML = "<audio style='max-width:100%;' controls><source src='" + s[0].fullPath + "'></audio>";
-      $("#" + input_id + "-media").html(mediaHTML);
-      uploadFile(s[0].fullPath);
-    }
-
-    function uploadFile(fileURI) {
-      // upload file
-      var uri = encodeURI(Drupal.settings.site_path + "/" + Drupal.settings.endpoint + "/file/create_raw");
-
-      var fileOptions = new FileUploadOptions();
-      fileOptions.fileKey = "files[file_1]";
-      fileOptions.fileName = fileURI.substr(fileURI.lastIndexOf('/') + 1);
-      //options.mimeType="image/jpeg";
-      //options.mimeType="video/quicktime";
-
-      var ft = new FileTransfer();
-
-      // show progress
-      ft.onprogress = function (progressEvent) {
-        if (progressEvent.lengthComputable) {
-          var progress = Math.round(progressEvent.loaded * 100 / progressEvent.total);
-          $(".ui-loader h1").replaceWith("<h1>" + t("Uploading") + " " + progress + "%</h1>");
-        }
-      };
-
-      // show toast
-      drupalgap.loader = 'uploading';
-      drupalgap_loading_message_show();
-
-      ft.upload(
-        fileURI,
-        uri,
-        function (r) {
-          // success
-          // $("#edit-node-edit-field-media-und-0-value-add-media-button").trigger( "click" );
-          //_drupalgap_form_add_another_item(form_id, name, delta);
-
-
-          drupalgap_loading_message_hide();
-          console.log("Code = " + r.responseCode);
-          console.log("Response = " + r.response);
-          console.log("Sent = " + r.bytesSent);
-
-          var result = $.parseJSON(r.response);
-          var fid = result[0].fid;
-
-          // set fid in form
-          $("input#" + input_id).val(fid);
-
-          // add another item
-          // @TODO: check cardinality of field
-          _drupalgap_form_add_another_item(form_id, name, delta);
-          // remove current media button
-          $("#" + input_id + "-add-media-button").remove();
-          init_media_upload();
-          // move media button below new field
-          //$(this).after($(this).next());
-
-
-        },
-        function (error) {
-          // error
-          drupalgap_loading_message_hide();
-          console.log("upload error source " + error.source);
-          console.log("upload error target " + error.target);
-        },
-        fileOptions
-      );
-    }
-
-    function cameraGetMedia(srcType, medType) {
-      var cameraOptions = setCameraOptions(srcType, medType);
-      dpm("medType: " + medType);
-      navigator.camera.getPicture(function (f) {
-        var mediaHTML = "";
-        if (medType == Camera.MediaType.PICTURE) {
-          mediaHTML = "<img src='" + f + "'>";
-        } else if (medType == Camera.MediaType.VIDEO) {
-          mediaHTML += "<video  style='max-width:100%;' controls><source src='" + f + "'></video>";
-        }
-        $("#" + input_id + "-media").html(mediaHTML);
-        uploadFile(f);
-      }, function (e) {
-        dpm(e);
-      }, cameraOptions);
-
-    }
-
-    function onConfirm(buttonIndex) {
-      switch (buttonIndex) {
-        case 1:
-          // Upload Picture
-          // TODO: add support for multiple picks at once
-          var srcType = Camera.PictureSourceType.PHOTOLIBRARY;
-          var medType = Camera.MediaType.PICTURE;
-          cameraGetMedia(srcType, medType);
-          break;
-        case 2:
-          // Take Picture
-          var srcType = Camera.PictureSourceType.CAMERA;
-          var medType = Camera.MediaType.PICTURE;
-          cameraGetMedia(srcType, medType);
-          break;
-        case 3:
-          // Upload Video
-          var srcType = Camera.PictureSourceType.PHOTOLIBRARY;
-          var medType = Camera.MediaType.VIDEO;
-          cameraGetMedia(srcType, medType);
-          break;
-        case 4:
-          // Record Video
-          navigator.device.capture.captureVideo(captureVideoSuccess, captureError, {limit: 1});
-          break;
-        case 5:
-          // Record Audi
-          navigator.device.capture.captureAudio(captureAudioSuccess, captureError, {limit: 1});
-          break;
-        default:
-          return;
-      }
-    }
-
-    // @TODO  check allowed file/mime types
-    navigator.notification.confirm(
-      t('Which kind of media do you want to add?'), // message
-      onConfirm,            // callback to invoke with index of button pressed
-      t('Add media'),           // title
-      [t('Upload Picture'), t('Take Picture'), t('Upload Video'), t('Record Video'), t('Record Audio'), t('Cancel')]         // buttonLabels
-    );
-  })
-}
-
 
 
 
@@ -13731,7 +13558,10 @@ function user_login_form(form, form_state) {
       type: 'textfield',
       title: t('Username'),
       title_placeholder: true,
-      required: true
+      required: true,
+      attributes: {
+        autocapitalize: 'none'
+      }
     };
     form.elements.pass = {
       type: 'password',
@@ -14315,7 +14145,7 @@ function user_page() {
  */
 function user_register_access() {
   try {
-    switch (drupalgap.site_settings.user_register) {
+    switch (drupalgap.site_settings.user_register.toString()) {
       case '0': // admins only can register
         return false;
         break;
@@ -15064,12 +14894,9 @@ function theme_views_view(variables) {
       setTimeout(function() {
           $(selector).trigger('create').show('fast');
       }, 100);
-      if (
-        variables.empty_callback &&
-        function_exists(variables.empty_callback)
-      ) {
+      if (variables.empty_callback && function_exists(variables.empty_callback)) {
         var empty_callback = window[variables.empty_callback];
-        return views_exposed_form_html + drupalgap_render(empty_callback(results.view));
+        return views_exposed_form_html + drupalgap_render(empty_callback(results.view, variables));
       }
       return html + views_exposed_form_html;
     }
@@ -15405,7 +15232,7 @@ function drupalgap_views_render_rows(variables, results, root, child, open_row, 
       var row_content = '';
       if (variables.row_callback && function_exists(variables.row_callback)) {
         row_callback = window[variables.row_callback];
-        row_content = row_callback(results.view, row);
+        row_content = row_callback(results.view, row, variables);
       }
       else { row_content = JSON.stringify(row); }
       html += open_row + row_content + close_row;
