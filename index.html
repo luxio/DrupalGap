@@ -1,46 +1,77 @@
 <!DOCTYPE html>
 <html>
-    <head>
-    
-      <title>DrupalGap</title>
+<head>
 
-      <meta charset="utf-8" />
-      <meta name="format-detection" content="telephone=no" />
-      <!-- WARNING: for iOS 7, remove the width=device-width and height=device-height attributes. See https://issues.apache.org/jira/browse/CB-4323 -->
-      <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height" />
-      <link rel="shortcut icon" href="favicon.ico" />
-      
-      <!-- jQuery Mobile -->
-      <link rel="stylesheet" href="jquery.mobile-1.4.5.min.css" />
-      <script src="jquery-1.9.1.min.js"></script>
-      <script src="jquery.mobile-1.4.5.min.js"></script>
-      
-      <!-- jDrupal -->
-      <script type="text/javascript" charset="utf-8" src="jdrupal-7.0.5.min.js"></script>
-      
-      <!-- DrupalGap -->
-      <script type="text/javascript" charset="utf-8" src="bin/drupalgap-7.0.2.min.js"></script>
-      <script type="text/javascript" charset="utf-8" src="app/settings.js"></script>
-      <link rel="stylesheet" href="css/drupalgap.css" />
+    <title>DiaryPad</title>
 
-    </head>
-    <body>
+    <meta charset="utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <!-- WARNING: for iOS 7, remove the width=device-width and height=device-height attributes. See https://issues.apache.org/jira/browse/CB-4323 -->
+    <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height" />
+    <link rel="shortcut icon" href="favicon.ico" />
 
-      <!-- Mobile Application Splash Screen -->
-      <div id="_drupalgap_splash" data-role="page">
-         <div data-role="header" data-theme="b"><h2>DrupalGap</h2></div>
-         <div class="ui-content" data-role="content">
-            <div id="_drupalgap_splash_content">
-              <img src="images/drupalgap.jpg" alt="DrupalGap" style="position: absolute; top: 50%; left: 50%; margin-left: -64px; margin-top: -64px;" />
-            </div>
-         </div>
-      </div>
+    <!--<link rel="stylesheet" href="jquery.mobile-1.4.5.min.css" />-->
+    <script src="jquery-1.9.1.min.js"></script>
+    <script src="jquery.mobile-defaults.js"></script>
+    <!-- jQuery Mobile -->
+    <script src="jquery.mobile-1.4.5.min.js"></script>
 
-      <!-- Load DrupalGap -->
-      <script type="text/javascript">
-        drupalgap_onload();
-      </script>
+    <!-- jDrupal -->
+    <!--<script type="text/javascript" charset="utf-8" src="jdrupal-7.0.4.min.js"></script>-->
+    <script type="text/javascript" charset="utf-8" src="jdrupal.js"></script>
 
-    </body>
+
+    <!-- DrupalGap -->
+    <!--<script type="text/javascript" charset="utf-8" src="bin/drupalgap-7.0.1.min.js"></script>-->
+    <script type="text/javascript" charset="utf-8" src="bin/drupalgap.js"></script>
+    <!--<script type="text/javascript" charset="utf-8"  src="bin/drupalgap-7.x-1.3.min.js"></script>-->
+
+    <script type="text/javascript" charset="utf-8" src="app/settings.js"></script>
+    <link rel="stylesheet" href="css/drupalgap.css" />
+
+    <!-- Liveloop Theme -->
+    <!-- Custom jQuery Mobile css -->
+    <!--<link rel="stylesheet" href="app/themes/liveloop_theme/liveloop_theme.css" />-->
+    <!--<link rel="stylesheet" href="app/themes/liveloop_theme/libeloop_theme.min.css" />-->
+    <!--<link rel="stylesheet" href="app/themes/liveloop_theme/jquery.mobile.icons.min.css" />-->
+    <link rel="stylesheet" href="app/themes/liveloop_theme/liveloop_theme.css" />
+    <link rel="stylesheet" href="app/themes/liveloop_theme/jquery.mobile.icons.min.css" />
+    <link rel="stylesheet" href="jquery.mobile.structure-1.4.5.min.css" />
+    <link rel="stylesheet" href="app/themes/liveloop_theme/css/custom.css"/>
+    <link rel="stylesheet" href="app/themes/liveloop_theme/jquery-mobile-font-awesome/css/jqm-font-awesome-isvg-ipng.min.css"/>
+
+
+    <!-- My Module JS Extras-->
+    <script type="text/javascript"
+            src="app/modules/custom/liveloop/js/jquery.timeago.js"></script>
+    <script type="text/javascript"
+            src="app/modules/custom/liveloop/js/timeago.js"></script>
+    <script type="text/javascript"
+            src="app/modules/custom/liveloop/includes/liveloop.inline.js"></script>
+
+
+</head>
+<body>
+
+<!-- Mobile Application Splash Screen -->
+<div id="_drupalgap_splash" data-role="page">
+    <div id="splash-header" data-role="header" data-theme="b"><h2>DiaryPad</h2></div>
+    <div class="ui-content" data-role="content">
+        <div id="_drupalgap_splash_content">
+            <img src="app/themes/liveloop_theme/images/liveloop-logo-128.png" alt="Liveloop"
+                 style="position: absolute; top: 50%; left: 50%; margin-left: -64px; margin-top: -64px;"/>
+        </div>
+    </div>
+</div>
+
+<!-- Load PhoneGap (Cordova) -->
+<script type="text/javascript" src="cordova.js"></script>
+
+<!-- Load DrupalGap -->
+<script type="text/javascript">
+    drupalgap_onload();
+</script>
+
+</body>
 </html>
 
