@@ -173,6 +173,8 @@ function drupalgap_entity_render_content(entity_type, entity) {
         // Save the field display and weight. Use the weight from the field's render element if it's available,
         // otherwise fallback to the weight mentioned in the display.
         field_displays[field_name] = display;
+        // check if field_name exists
+        if (entity[field_name] === 'undefined' ) { continue; }
         field_weights[field_name] = typeof entity[field_name].weight !== 'undefined' ?
             entity[field_name].weight : display.weight;
     }
