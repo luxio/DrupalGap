@@ -577,6 +577,11 @@ function drupalgap_entity_build_from_form_state(form, form_state) {
  */
 function drupalgap_entity_form_submit(form, form_state, entity) {
   try {
+    // Prevent a user clicking the submit button twice or more
+    // by disabling the submit button
+    // https://github.com/signalpoint/DrupalGap/issues/860
+    var submitButton = $('#' + form.id + ' button.dg_form_submit_button');
+    $(submitButton).prop('disabled', true);
 
     // Grab the primary key name for this entity type.
     var primary_key = entity_primary_key(form.entity_type);
@@ -613,6 +618,8 @@ function drupalgap_entity_form_submit(form, form_state, entity) {
         if (form.action_options) {
           goto_options = $.extend({}, goto_options, form.action_options);
         }
+        // enable submit button again
+        $(submitButton).prop('disabled', false);
         // Finally goto our destination.
         drupalgap_goto(destination, goto_options);
       }
@@ -624,6 +631,9 @@ function drupalgap_entity_form_submit(form, form_state, entity) {
     // Setup the error call back.
     call_arguments.error = function(xhr, status, message) {
       try {
+        // enable submit button again
+        $(submitButton).prop('disabled', false);
+
         // If there were any form errors, display them in an alert.
         var msg = _drupalgap_form_submit_response_errors(form, form_state, xhr,
           status, message);
@@ -1061,3 +1071,4 @@ function entity_services_request_pre_postprocess_alter(options, result) {
   }
 }
 
+//#sourceURL=entity.js
